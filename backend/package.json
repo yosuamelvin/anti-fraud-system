@@ -1,0 +1,34 @@
+{
+  "name": "antifraud-backend",
+  "version": "1.0.0",
+  "description": "Anti-Fraud Investigation Backend API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "prod": "NODE_ENV=production node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.16.1",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "imap-simple": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mailparser": "^3.9.8",
+    "moment": "^2.30.1",
+    "node-imap": "^0.9.6",
+    "nodemailer": "^8.0.7",
+    "pg": "^8.20.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
