@@ -1,40 +1,31 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASSWORD,
-  {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    dialect: 'postgres',
-    logging: false,
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
+console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
+
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  logging: console.log,
+
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
     }
   }
-);
+});
 
-// Sync database
 const syncDatabase = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Koneksi database berhasil!');
+    console.log('✅ Database connected');
 
     await sequelize.sync();
-    console.log('✅ Database synchronized!');
+    console.log('✅ Database synced');
+
   } catch (error) {
-    console.error('❌ Koneksi database gagal:', error.message);
+    console.error('❌ DATABASE FULL ERROR:', error);
     throw error;
   }
 };
