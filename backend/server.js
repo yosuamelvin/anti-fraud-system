@@ -1,20 +1,20 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+
+dotenv.config();
+
 const { sequelize, syncDatabase } = require('./config/database');
-const { User } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const caseRoutes = require('./routes/caseRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const { startEmailMonitoring } = require('./services/emailService');
-
-// Load environment variables
-dotenv.config();
+const { seedUsers } = require('./seeders/userSeed');
 
 const app = express();
 
-// CORS Configuration - Support multiple origins for production
+// CORS Configuration
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -24,7 +24,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
+    // Allow Postman/curl/mobile apps
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
@@ -42,7 +42,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint (IMPORTANT for Render.com)
+// Health Check
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
@@ -52,7 +52,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root endpoint
+// Root Endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
     message: 'Anti-Fraud Investigation API',
@@ -83,7 +83,7 @@ app.use((req, res) => {
 
 // Error Handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('❌ Server Error:', err);
 
   res.status(500).json({
     success: false,
@@ -94,97 +94,46 @@ app.use((err, req, res, next) => {
 // Server Port
 const PORT = process.env.PORT || 5000;
 
-// Auto Seeder Function
-const autoSeedAdmin = async () => {
-  try {
-    const { User } = require('./models');
-    const bcrypt = require('bcryptjs');
-
-    const existingAdmin = await User.findOne({
-      where: {
-        email: 'admin@antifraud.com'
-      }
-    });
-
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-
-      await User.create({
-        nama_lengkap: 'Super Admin',
-        email: 'admin@antifraud.com',
-        password: hashedPassword,
-        role: 'kepala_divisi',
-        is_active: true
-      });
-
-      console.log('✅ Default admin created');
-      console.log('📧 Email: admin@antifraud.com');
-      console.log('🔑 Password: admin123');
-    } else {
-      console.log('ℹ️ Default admin already exists');
-    }
-  } catch (error) {
-    console.error('❌ Error auto seeding admin:', error.message);
-  }
-};
-
-// Start Server Function
+// Start Server
 const startServer = async () => {
   try {
-    console.log('Starting Anti-Fraud Backend Server...');
-    console.log('Environment:', process.env.NODE_ENV || 'development');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🚀 Starting Anti-Fraud Backend');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Test database connection
-    console.log('Connecting to database...');
+    console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+
+    // Test DB Connection
+    console.log('🔌 Connecting to database...');
     await sequelize.authenticate();
     console.log('✅ Database connected');
 
-    // Sync database
+    // Sync Tables
+    console.log('📦 Syncing database tables...');
     await syncDatabase();
-    console.log('✅ Database synced successfully!');
+    console.log('✅ Database synced');
 
-    // Auto create default admin if not exists
-    try {
-      const existingAdmin = await User.findOne({
-        where: {
-          email: 'admin@antifraud.com'
-        }
-    });
+    // Auto Seed Users
+    console.log('🌱 Running database seeders...');
+    await seedUsers();
+    console.log('✅ Seeder completed');
 
-    if (!existingAdmin) {
-      await User.create({
-        nama_lengkap: 'Super Admin',
-        email: 'admin@antifraud.com',
-        password: 'admin123',
-        role: 'superuser',
-        is_active: true
-      });
-
-      console.log('✅ Default admin created');
-    } else {
-      console.log('ℹ️ Default admin already exists');
-    }
-  } catch (seedError) {
-    console.error('❌ Error auto seeding admin:', seedError.message);
-  }
-
-    // Auto seed admin
-    await autoSeedAdmin();
-
-    // Start email monitoring (only in production with valid email config)
+    // Email Monitoring
     if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-      console.log('Starting email monitoring service...');
+      console.log('📧 Starting email monitoring...');
       startEmailMonitoring();
-      console.log('✅ Email monitoring started!');
+      console.log('✅ Email monitoring started');
     } else {
-      console.log('⚠️ Email monitoring disabled (missing EMAIL credentials)');
+      console.log('⚠️ Email monitoring disabled');
     }
 
-    // Start Express server - Listen on 0.0.0.0 for cloud deployment
+    // Start Express Server
     app.listen(PORT, '0.0.0.0', () => {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`✅ Server running on port ${PORT}`);
-      console.log(`✅ Health check: http://localhost:${PORT}/health`);
-      console.log(`✅ API endpoint: http://localhost:${PORT}/api`);
+      console.log(`✅ API: http://localhost:${PORT}/api`);
+      console.log(`✅ Health: http://localhost:${PORT}/health`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     });
 
   } catch (error) {
@@ -193,11 +142,10 @@ const startServer = async () => {
   }
 };
 
-// Start the server
 startServer();
 
-// Handle unhandled promise rejections
+// Unhandled Promise Rejection
 process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Promise Rejection:', err);
+  console.error('❌ Unhandled Promise Rejection:', err);
   process.exit(1);
 });
