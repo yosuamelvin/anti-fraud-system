@@ -10,7 +10,7 @@ const caseRoutes = require('./routes/caseRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const { startEmailMonitoring } = require('./services/emailService');
-const { seedUsers } = require('./seeders/userSeed');
+const { seedUsers } = require('./seeders/userSeeder');
 
 const app = express();
 
