@@ -9,7 +9,13 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: 'postgres',
-    logging: false, // Set true untuk melihat SQL queries
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
     pool: {
       max: 5,
       min: 0,
@@ -19,14 +25,21 @@ const sequelize = new Sequelize(
   }
 );
 
-// Test koneksi
-const testConnection = async () => {
+// Sync database
+const syncDatabase = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Koneksi database berhasil!');
+
+    await sequelize.sync();
+    console.log('✅ Database synchronized!');
   } catch (error) {
     console.error('❌ Koneksi database gagal:', error.message);
+    throw error;
   }
 };
 
-module.exports = { sequelize, testConnection };
+module.exports = {
+  sequelize,
+  syncDatabase
+};
