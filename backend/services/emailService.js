@@ -281,4 +281,6 @@ class EmailService {
 // Singleton instance
 const emailService = new EmailService();
 
-module.exports = emailService;
+module.exports = {
+  startEmailMonitoring
+};
