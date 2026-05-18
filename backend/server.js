@@ -17,6 +17,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
+  'https://anti-fraud-system-rouge.vercel.app',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
@@ -24,11 +25,12 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log('❌ Blocked by CORS:', origin);
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   credentials: true,
@@ -41,8 +43,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint (IMPORTANT for Render.com)
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     message: 'Anti-Fraud Backend Server is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
@@ -51,7 +53,7 @@ app.get('/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     message: 'Anti-Fraud Investigation API',
     version: '1.0.0',
     endpoints: {
@@ -72,51 +74,93 @@ app.use('/api/reports', reportRoutes);
 
 // 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Endpoint not found' 
+  res.status(404).json({
+    success: false,
+    message: 'Endpoint not found'
   });
 });
 
 // Error Handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(500).json({ 
-    success: false, 
-    message: err.message || 'Internal server error' 
+
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Internal server error'
   });
 });
 
 // Server Port
 const PORT = process.env.PORT || 5000;
 
+// Auto Seeder Function
+const autoSeedAdmin = async () => {
+  try {
+    const { User } = require('./models');
+    const bcrypt = require('bcryptjs');
+
+    const existingAdmin = await User.findOne({
+      where: {
+        email: 'admin@antifraud.com'
+      }
+    });
+
+    if (!existingAdmin) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+
+      await User.create({
+        nama: 'Super Admin',
+        email: 'admin@antifraud.com',
+        password: hashedPassword,
+        role: 'kepala_divisi',
+        is_active: true
+      });
+
+      console.log('✅ Default admin created');
+      console.log('📧 Email: admin@antifraud.com');
+      console.log('🔑 Password: admin123');
+    } else {
+      console.log('ℹ️ Default admin already exists');
+    }
+  } catch (error) {
+    console.error('❌ Error auto seeding admin:', error.message);
+  }
+};
+
 // Start Server Function
 const startServer = async () => {
   try {
     console.log('Starting Anti-Fraud Backend Server...');
     console.log('Environment:', process.env.NODE_ENV || 'development');
-    
-    // Sync database
+
+    // Test database connection
     console.log('Connecting to database...');
+    await sequelize.authenticate();
+    console.log('✅ Database connected');
+
+    // Sync database
     await syncDatabase();
-    console.log('Database synced successfully!');
-    
+    console.log('✅ Database synced successfully!');
+
+    // Auto seed admin
+    await autoSeedAdmin();
+
     // Start email monitoring (only in production with valid email config)
     if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
       console.log('Starting email monitoring service...');
       startEmailMonitoring();
-      console.log('Email monitoring started!');
+      console.log('✅ Email monitoring started!');
     } else {
-      console.log('Email monitoring disabled (missing EMAIL credentials)');
+      console.log('⚠️ Email monitoring disabled (missing EMAIL credentials)');
     }
-    
+
     // Start Express server - Listen on 0.0.0.0 for cloud deployment
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log(`✅ Health check: http://localhost:${PORT}/health`);
       console.log(`✅ API endpoint: http://localhost:${PORT}/api`);
     });
-    
+
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
