@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { sequelize, syncDatabase } = require('./config/database');
+const { User } = require('./models');
 const authRoutes = require('./routes/authRoutes');
 const caseRoutes = require('./routes/caseRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
@@ -109,7 +110,7 @@ const autoSeedAdmin = async () => {
       const hashedPassword = await bcrypt.hash('admin123', 10);
 
       await User.create({
-        nama: 'Super Admin',
+        nama_lengkap: 'Super Admin',
         email: 'admin@antifraud.com',
         password: hashedPassword,
         role: 'kepala_divisi',
@@ -141,6 +142,31 @@ const startServer = async () => {
     // Sync database
     await syncDatabase();
     console.log('✅ Database synced successfully!');
+
+    // Auto create default admin if not exists
+    try {
+      const existingAdmin = await User.findOne({
+        where: {
+          email: 'admin@antifraud.com'
+        }
+    });
+
+    if (!existingAdmin) {
+      await User.create({
+        nama_lengkap: 'Super Admin',
+        email: 'admin@antifraud.com',
+        password: 'admin123',
+        role: 'superuser',
+        is_active: true
+      });
+
+      console.log('✅ Default admin created');
+    } else {
+      console.log('ℹ️ Default admin already exists');
+    }
+  } catch (seedError) {
+    console.error('❌ Error auto seeding admin:', seedError.message);
+  }
 
     // Auto seed admin
     await autoSeedAdmin();
