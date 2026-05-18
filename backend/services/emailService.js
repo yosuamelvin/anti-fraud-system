@@ -281,6 +281,11 @@ class EmailService {
 // Singleton instance
 const emailService = new EmailService();
 
+// Start monitoring function
+const startEmailMonitoring = () => {
+  emailService.connect();
+};
+
 module.exports = {
   startEmailMonitoring
 };
