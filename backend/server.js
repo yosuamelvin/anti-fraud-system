@@ -2,16 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
+// Load environment variables first
 dotenv.config();
 
 const { sequelize, syncDatabase } = require('./config/database');
-const { User } = require('./models');
-
 const authRoutes = require('./routes/authRoutes');
 const caseRoutes = require('./routes/caseRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
-
 const { startEmailMonitoring } = require('./services/emailService');
 const { seedUsers } = require('./seeders/userSeeder');
 
@@ -32,8 +30,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-
-    // Allow Postman / mobile apps
+    // Allow requests with no origin (Postman, mobile apps)
     if (!origin) {
       return callback(null, true);
     }
@@ -45,7 +42,6 @@ const corsOptions = {
       callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
-
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -98,7 +94,7 @@ app.get('/', (req, res) => {
 
 /*
 |--------------------------------------------------------------------------
-| ROUTES
+| API ROUTES
 |--------------------------------------------------------------------------
 */
 
@@ -127,9 +123,8 @@ app.use((req, res) => {
 */
 
 app.use((err, req, res, next) => {
-
-  console.error('❌ Error:', err);
-
+  console.error('❌ Error:', err.message);
+  
   res.status(500).json({
     success: false,
     message: err.message || 'Internal server error'
@@ -151,50 +146,35 @@ const PORT = process.env.PORT || 5000;
 */
 
 const startServer = async () => {
-
   try {
-
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🚀 Starting Anti-Fraud Backend');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    console.log('🌍 Environment:', process.env.NODE_ENV);
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATABASE CONNECTION
-    |--------------------------------------------------------------------------
-    */
-
-    console.log('🔌 Connecting to database...');
-
-    await sequelize.authenticate();
-
-    console.log('✅ Database connected');
+    console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+    
+    if (process.env.DATABASE_URL) {
+      console.log('📦 Database: Neon (Production)');
+    } else {
+      console.log('📦 Database: PostgreSQL (Local)');
+    }
 
     /*
     |--------------------------------------------------------------------------
-    | SYNC DATABASE
+    | DATABASE SYNC
     |--------------------------------------------------------------------------
     */
-
-    console.log('📦 Syncing database tables...');
 
     await syncDatabase();
 
-    console.log('✅ Database synced successfully');
-
     /*
     |--------------------------------------------------------------------------
-    | AUTO SEED USERS
+    | SEED USERS (AUTO)
     |--------------------------------------------------------------------------
     */
 
-    console.log('🌱 Running auto seeder...');
-
+    console.log('\n🌱 Running user seeder...');
     await seedUsers();
-
-    console.log('✅ Seeder completed');
 
     /*
     |--------------------------------------------------------------------------
@@ -203,17 +183,11 @@ const startServer = async () => {
     */
 
     if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-
-      console.log('📧 Starting email monitoring...');
-
+      console.log('\n📧 Starting email monitoring...');
       startEmailMonitoring();
-
-      console.log('✅ Email monitoring started');
-
+      console.log('✅ Email monitoring active');
     } else {
-
-      console.log('⚠️ Email monitoring disabled');
-
+      console.log('\n⚠️  Email monitoring disabled (no credentials)');
     }
 
     /*
@@ -223,20 +197,17 @@ const startServer = async () => {
     */
 
     app.listen(PORT, '0.0.0.0', () => {
-
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`✅ Server running on port ${PORT}`);
-      console.log(`✅ Health: /health`);
-      console.log(`✅ API: /api`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
+      console.log(`✅ Health: http://localhost:${PORT}/health`);
+      console.log(`✅ API: http://localhost:${PORT}/api`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     });
 
   } catch (error) {
-
-    console.error('❌ Failed to start server');
-    console.error(error);
-
+    console.error('\n❌ Failed to start server');
+    console.error('Error:', error.message);
+    console.error('\nStack:', error.stack);
     process.exit(1);
   }
 };
@@ -256,9 +227,8 @@ startServer();
 */
 
 process.on('unhandledRejection', (err) => {
-
-  console.error('❌ Unhandled Promise Rejection');
-  console.error(err);
-
+  console.error('\n❌ Unhandled Promise Rejection');
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
   process.exit(1);
 });
