@@ -12,7 +12,7 @@ const Holiday = sequelize.define('Holiday', {
     allowNull: false,
     unique: true
   },
-  nama_libur: {
+  nama_hari_libur: {
     type: DataTypes.STRING(200),
     allowNull: false
   },
