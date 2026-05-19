@@ -1,153 +1,144 @@
-const { Holiday } = require('../models');
 const axios = require('axios');
+const { Holiday } = require('../models');
 
 /**
- * Fetch hari libur dari API Hari Libur Indonesia
- * API: https://api-harilibur.vercel.app/
- * Free & Auto-update setiap tahun
- */
-const fetchHolidaysFromAPI = async (year) => {
-  try {
-    const response = await axios.get(`https://api-harilibur.vercel.app/api?year=${year}`);
-    
-    if (response.data && Array.isArray(response.data)) {
-      return response.data
-        .filter(holiday => holiday.is_national_holiday) // Hanya hari libur nasional
-        .map(holiday => ({
-          tanggal: holiday.holiday_date,
-          nama_libur: holiday.holiday_name,
-          keterangan: 'Libur Nasional'
-        }));
-    }
-    
-    return [];
-  } catch (error) {
-    console.log(`⚠️  Tidak bisa fetch API untuk tahun ${year}:`, error.message);
-    return null;
-  }
-};
-
-/**
- * Manual fallback data untuk tahun 2026
- * Digunakan kalau API down atau gagal
- */
-const manualHolidays2026 = [
-  { tanggal: '2026-01-01', nama_libur: 'Tahun Baru Masehi', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-01-17', nama_libur: 'Tahun Baru Imlek', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-02-17', nama_libur: 'Isra Mikraj', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-03-03', nama_libur: 'Wafat Isa Al Masih', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-03-20', nama_libur: 'Hari Raya Idul Fitri', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-03-21', nama_libur: 'Hari Raya Idul Fitri', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-03-22', nama_libur: 'Hari Raya Nyepi', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-05-01', nama_libur: 'Hari Buruh Internasional', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-05-02', nama_libur: 'Hari Raya Waisak', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-05-14', nama_libur: 'Kenaikan Isa Al Masih', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-05-27', nama_libur: 'Hari Raya Idul Adha', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-06-01', nama_libur: 'Hari Lahir Pancasila', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-06-17', nama_libur: 'Tahun Baru Islam', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-08-17', nama_libur: 'Hari Kemerdekaan RI', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-08-26', nama_libur: 'Maulid Nabi Muhammad', keterangan: 'Libur Nasional' },
-  { tanggal: '2026-12-25', nama_libur: 'Hari Raya Natal', keterangan: 'Libur Nasional' }
-];
-
-/**
- * Manual fallback data untuk tahun 2027
- */
-const manualHolidays2027 = [
-  { tanggal: '2027-01-01', nama_libur: 'Tahun Baru Masehi', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-02-06', nama_libur: 'Tahun Baru Imlek', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-02-06', nama_libur: 'Isra Mikraj', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-03-10', nama_libur: 'Hari Raya Idul Fitri', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-03-11', nama_libur: 'Hari Raya Idul Fitri', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-03-11', nama_libur: 'Hari Raya Nyepi', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-04-02', nama_libur: 'Wafat Isa Al Masih', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-05-01', nama_libur: 'Hari Buruh Internasional', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-05-16', nama_libur: 'Hari Raya Idul Adha', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-05-21', nama_libur: 'Hari Raya Waisak', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-05-27', nama_libur: 'Kenaikan Isa Al Masih', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-06-01', nama_libur: 'Hari Lahir Pancasila', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-06-07', nama_libur: 'Tahun Baru Islam', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-08-15', nama_libur: 'Maulid Nabi Muhammad', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-08-17', nama_libur: 'Hari Kemerdekaan RI', keterangan: 'Libur Nasional' },
-  { tanggal: '2027-12-25', nama_libur: 'Hari Raya Natal', keterangan: 'Libur Nasional' }
-];
-
-/**
- * Seed hari libur untuk multiple years
- * Default: seed 2 tahun (current year + next year)
+ * Fetch holidays from API and seed database
  */
 const seedHolidays = async () => {
   try {
+    console.log('🌱 Seeding holidays...');
+
+    // Check if holidays already exist
+    const existingCount = await Holiday.count();
+    
+    if (existingCount > 0) {
+      console.log(`ℹ️  Holidays already seeded (${existingCount} records)`);
+      return;
+    }
+
+    // Fetch from API
+    console.log('📡 Fetching holidays from API...');
+    
+    const response = await axios.get('https://api-harilibur.vercel.app/api', {
+      timeout: 10000 // 10 second timeout
+    });
+
+    if (!response.data) {
+      throw new Error('No data received from API');
+    }
+
+    const holidays = [];
     const currentYear = new Date().getFullYear();
-    const yearsToSeed = [currentYear, currentYear + 1]; // 2026 & 2027
-    
-    let totalSeeded = 0;
-    
-    for (const year of yearsToSeed) {
-      console.log(`\n🔄 Fetching hari libur untuk tahun ${year}...`);
+
+    // Process holidays for current year and next year
+    for (let year = currentYear; year <= currentYear + 1; year++) {
+      const yearData = response.data[year];
       
-      // Cek apakah sudah ada data untuk tahun ini
-      const existingCount = await Holiday.count({
-        where: {
-          tanggal: {
-            [require('sequelize').Op.gte]: `${year}-01-01`,
-            [require('sequelize').Op.lte]: `${year}-12-31`
-          }
-        }
-      });
-      
-      if (existingCount > 0) {
-        console.log(`⚠️  Hari libur tahun ${year} sudah ada (${existingCount} entries). Skip.`);
+      if (!yearData) {
+        console.log(`⚠️  No data for year ${year}`);
         continue;
       }
-      
-      // Fetch dari API
-      let holidays = await fetchHolidaysFromAPI(year);
-      
-      // Kalau API gagal dan year = 2026, pakai manual data
-      if (!holidays && year === 2026) {
-        if (year === 2026) {
-        console.log(`📋 Menggunakan data manual untuk tahun ${year}`);
-        holidays = manualHolidays2026;
-      } else if (year === 2027) {
-        console.log(`📋 Menggunakan data manual untuk tahun ${year}`);
-        holidays = manualHolidays2027;
+
+      for (const [date, holiday] of Object.entries(yearData)) {
+        holidays.push({
+          tanggal: new Date(date),
+          nama_hari_libur: holiday.localName || holiday.name || 'Holiday',
+          keterangan: holiday.description || `${holiday.localName || holiday.name} - ${year}`,
+          is_active: true
+        });
       }
     }
+
+    if (holidays.length === 0) {
+      console.log('⚠️  No holidays to seed, using fallback data');
       
-      // Skip kalau tidak ada data
-      if (!holidays || holidays.length === 0) {
-        console.log(`⚠️  Tidak ada data hari libur untuk tahun ${year}`);
-        continue;
+      // Fallback: Manual Indonesian holidays for 2025-2026
+      const fallbackHolidays = [
+        // 2025
+        { tanggal: '2025-01-01', nama_hari_libur: 'Tahun Baru 2025', keterangan: 'Tahun Baru Masehi' },
+        { tanggal: '2025-03-29', nama_hari_libur: 'Isra Miraj', keterangan: 'Isra Miraj Nabi Muhammad SAW' },
+        { tanggal: '2025-03-31', nama_hari_libur: 'Idul Fitri', keterangan: 'Hari Raya Idul Fitri 1446 H' },
+        { tanggal: '2025-04-01', nama_hari_libur: 'Idul Fitri', keterangan: 'Hari Raya Idul Fitri 1446 H' },
+        { tanggal: '2025-04-18', nama_hari_libur: 'Wafat Isa Almasih', keterangan: 'Wafat Isa Almasih' },
+        { tanggal: '2025-05-01', nama_hari_libur: 'Hari Buruh', keterangan: 'Hari Buruh Internasional' },
+        { tanggal: '2025-05-29', nama_hari_libur: 'Kenaikan Isa Almasih', keterangan: 'Kenaikan Isa Almasih' },
+        { tanggal: '2025-06-01', nama_hari_libur: 'Hari Lahir Pancasila', keterangan: 'Hari Lahir Pancasila' },
+        { tanggal: '2025-06-07', nama_hari_libur: 'Idul Adha', keterangan: 'Hari Raya Idul Adha 1446 H' },
+        { tanggal: '2025-06-28', nama_hari_libur: 'Tahun Baru Islam', keterangan: 'Tahun Baru Islam 1447 H' },
+        { tanggal: '2025-08-17', nama_hari_libur: 'Hari Kemerdekaan RI', keterangan: 'Hari Kemerdekaan Republik Indonesia' },
+        { tanggal: '2025-09-06', nama_hari_libur: 'Maulid Nabi Muhammad', keterangan: 'Maulid Nabi Muhammad SAW' },
+        { tanggal: '2025-12-25', nama_hari_libur: 'Hari Raya Natal', keterangan: 'Hari Raya Natal' },
+        
+        // 2026
+        { tanggal: '2026-01-01', nama_hari_libur: 'Tahun Baru 2026', keterangan: 'Tahun Baru Masehi' },
+        { tanggal: '2026-02-17', nama_hari_libur: 'Tahun Baru Imlek', keterangan: 'Tahun Baru Imlek 2577' },
+        { tanggal: '2026-03-11', nama_hari_libur: 'Hari Suci Nyepi', keterangan: 'Hari Suci Nyepi Tahun Baru Saka 1948' },
+        { tanggal: '2026-03-18', nama_hari_libur: 'Isra Miraj', keterangan: 'Isra Miraj Nabi Muhammad SAW' },
+        { tanggal: '2026-03-20', nama_hari_libur: 'Idul Fitri', keterangan: 'Hari Raya Idul Fitri 1447 H' },
+        { tanggal: '2026-03-21', nama_hari_libur: 'Idul Fitri', keterangan: 'Hari Raya Idul Fitri 1447 H' },
+        { tanggal: '2026-04-03', nama_hari_libur: 'Wafat Isa Almasih', keterangan: 'Wafat Isa Almasih' },
+        { tanggal: '2026-05-01', nama_hari_libur: 'Hari Buruh', keterangan: 'Hari Buruh Internasional' },
+        { tanggal: '2026-05-14', nama_hari_libur: 'Kenaikan Isa Almasih', keterangan: 'Kenaikan Isa Almasih' },
+        { tanggal: '2026-05-27', nama_hari_libur: 'Idul Adha', keterangan: 'Hari Raya Idul Adha 1447 H' },
+        { tanggal: '2026-06-01', nama_hari_libur: 'Hari Lahir Pancasila', keterangan: 'Hari Lahir Pancasila' },
+        { tanggal: '2026-06-17', nama_hari_libur: 'Tahun Baru Islam', keterangan: 'Tahun Baru Islam 1448 H' },
+        { tanggal: '2026-08-17', nama_hari_libur: 'Hari Kemerdekaan RI', keterangan: 'Hari Kemerdekaan Republik Indonesia' },
+        { tanggal: '2026-08-26', nama_hari_libur: 'Maulid Nabi Muhammad', keterangan: 'Maulid Nabi Muhammad SAW' },
+        { tanggal: '2026-12-25', nama_hari_libur: 'Hari Raya Natal', keterangan: 'Hari Raya Natal' }
+      ];
+
+      for (const holiday of fallbackHolidays) {
+        holidays.push({
+          tanggal: new Date(holiday.tanggal),
+          nama_hari_libur: holiday.nama_hari_libur,
+          keterangan: holiday.keterangan,
+          is_active: true
+        });
       }
-      
-      // Insert ke database
-      await Holiday.bulkCreate(holidays);
-      totalSeeded += holidays.length;
-      console.log(`✅ Berhasil seed ${holidays.length} hari libur untuk tahun ${year}`);
     }
-    
-    if (totalSeeded > 0) {
-      console.log(`\n🎉 Total ${totalSeeded} hari libur berhasil di-seed!`);
-    } else {
-      console.log('\n✅ Semua hari libur sudah up-to-date!');
-    }
-    
+
+    // Bulk insert holidays
+    await Holiday.bulkCreate(holidays);
+
+    console.log(`✅ Seeded ${holidays.length} holidays`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ Holiday seeding completed');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
   } catch (error) {
     console.error('❌ Error seeding holidays:', error.message);
+    
+    // If API fails, use fallback data
+    console.log('⚠️  Using fallback holiday data...');
+    
+    const fallbackHolidays = [
+      { tanggal: '2025-01-01', nama_hari_libur: 'Tahun Baru 2025', keterangan: 'Tahun Baru Masehi' },
+      { tanggal: '2025-03-31', nama_hari_libur: 'Idul Fitri', keterangan: 'Hari Raya Idul Fitri' },
+      { tanggal: '2025-04-01', nama_hari_libur: 'Idul Fitri', keterangan: 'Hari Raya Idul Fitri' },
+      { tanggal: '2025-05-01', nama_hari_libur: 'Hari Buruh', keterangan: 'Hari Buruh Internasional' },
+      { tanggal: '2025-06-01', nama_hari_libur: 'Hari Lahir Pancasila', keterangan: 'Hari Lahir Pancasila' },
+      { tanggal: '2025-08-17', nama_hari_libur: 'Hari Kemerdekaan RI', keterangan: 'Kemerdekaan RI' },
+      { tanggal: '2025-12-25', nama_hari_libur: 'Hari Raya Natal', keterangan: 'Hari Raya Natal' },
+      { tanggal: '2026-01-01', nama_hari_libur: 'Tahun Baru 2026', keterangan: 'Tahun Baru Masehi' },
+      { tanggal: '2026-05-01', nama_hari_libur: 'Hari Buruh', keterangan: 'Hari Buruh Internasional' },
+      { tanggal: '2026-08-17', nama_hari_libur: 'Hari Kemerdekaan RI', keterangan: 'Kemerdekaan RI' },
+      { tanggal: '2026-12-25', nama_hari_libur: 'Hari Raya Natal', keterangan: 'Hari Raya Natal' }
+    ];
+
+    try {
+      const holidays = fallbackHolidays.map(h => ({
+        tanggal: new Date(h.tanggal),
+        nama_hari_libur: h.nama_hari_libur,
+        keterangan: h.keterangan,
+        is_active: true
+      }));
+
+      await Holiday.bulkCreate(holidays);
+      console.log(`✅ Seeded ${holidays.length} fallback holidays`);
+    } catch (fallbackError) {
+      console.error('❌ Fallback seeding also failed:', fallbackError.message);
+    }
   }
 };
 
-/**
- * Function untuk update holiday calendar setiap tahun
- * Bisa dipanggil manual atau via cron job
- */
-const updateHolidayCalendar = async () => {
-  const currentYear = new Date().getFullYear();
-  const nextYear = currentYear + 1;
-  
-  console.log(`\n🔄 Checking holiday calendar for ${currentYear} & ${nextYear}...`);
-  await seedHolidays();
-};
-
-module.exports = { seedHolidays, updateHolidayCalendar };
+module.exports = { seedHolidays };

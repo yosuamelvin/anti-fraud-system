@@ -12,6 +12,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const { startEmailMonitoring } = require('./services/emailService');
 const { seedUsers } = require('./seeders/userSeeder');
+const { seedHolidays } = require('./seeders/holidaySeeder');
 
 const app = express();
 
@@ -175,6 +176,15 @@ const startServer = async () => {
 
     console.log('\n🌱 Running user seeder...');
     await seedUsers();
+
+    /*
+    |--------------------------------------------------------------------------
+    | SEED HOLIDAYS (AUTO)
+    |--------------------------------------------------------------------------
+    */
+
+    console.log('\n🌱 Running holiday seeder...');
+    await seedHolidays();
 
     /*
     |--------------------------------------------------------------------------
